@@ -6,7 +6,6 @@
 * [Introduction](intro.ipynb)
 * [Installing Tools](install.ipynb)
 * [Basics of Python](basics.ipynb)
-* [Individual Project](individual_project.ipynb)
 
 | Next |
 |:-----|
