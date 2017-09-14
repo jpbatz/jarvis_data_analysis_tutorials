@@ -18,19 +18,19 @@ from random import choice, shuffle, sample, randint
 from datetime import datetime, timedelta
 from ipaddress import ip_address as ipaddr, ip_network as ip_netw
 
-
 # CONFIGURATION SETTINGS
 num_of_lines = 210000
 num_of_ips = 30
 num_of_netw = 10
-num_of_target_ips = 4
-num_of_target_netw = 2
+
+num_of_target_src_ips = 1
+num_of_target_dst_ips = 1
+num_of_target_src_netw = 1
+num_of_target_dst_netw = 1
+
 out_file = 'output.csv'
 
-
 fout = open(out_file, 'w')
-
-
 
 def generate_ips(num_of_netw=num_of_netw, num_of_ips=num_of_ips):
     '''creates a set of networks and chooses a random set of ip addresses from
@@ -116,24 +116,27 @@ def packets_gen(target=False):
 rng = 700
 starttime = datetime.now()
 current_time = starttime
+
+# Cycletime represents the beacon time (i.e. 5 min/300 seconds)
 cycletime = starttime - timedelta(0, 300)
-minimum_delta = timedelta(0, 0, 900000)
-micro_second_options = list(range(0, 6000000, 12343))
+# minimum_delta represents the time between rows
+minimum_delta = timedelta(0, 0, 200000)
+# micro_second_options >>> the diffs between first time and last time
+micro_second_options = list(range(10000, 6000000, 12343))
 
 
+ms_range = list(range(100000, 200000))
 
-ms_range = list(range(350000, 650000))
+
 def create_tdelta(ms_range):            # rename...
     '''creates a timedelta that falls between the upper and lower bounds
     within the sequence ms_range
+    Essentially sets the differential between rows....
     '''
 
     return timedelta(0, 0, choice(ms_range))
 
 # for ts in range(rng):
-
-
-
 
 def initiator_gen(target=False):
     flags = [(1, 1), (1, 2), (2, 1), (2, 2)]
@@ -142,15 +145,22 @@ def initiator_gen(target=False):
     return choice(flags)
 
 
+# Create lists of IPs and target IPs
+'''
+num_of_target_src_ips = 2
+num_of_target_dst_ips = 2
+num_of_target_src_netw = 1
+num_of_target_dst_netw = 1
+'''
 
 ip_list_src = generate_ips()
 shuffle(ip_list_src)
-ip_list_src_target = generate_ips(num_of_netw=num_of_target_netw, num_of_ips=num_of_target_ips)
+ip_list_src_target = generate_ips(num_of_netw=num_of_target_src_netw, num_of_ips=num_of_target_src_ips)
 shuffle(ip_list_src_target)
 
 ip_list_dest = generate_ips()
 shuffle(ip_list_dest)
-ip_list_dest_target = generate_ips(num_of_netw=num_of_target_netw, num_of_ips=num_of_target_ips)
+ip_list_dest_target = generate_ips(num_of_netw=num_of_target_dst_netw, num_of_ips=num_of_target_dst_ips)
 shuffle(ip_list_dest_target)
 
 
@@ -161,7 +171,6 @@ for line in range(num_of_lines):
         cycletime = current_time - timedelta(0, 300)
         # inject the good target stuff...
         # periodicity
-
 
         # bytes/packets
         packets1 = str(packets_gen(True))
@@ -174,12 +183,8 @@ for line in range(num_of_lines):
         # packet sources
         packet_src = initiator_gen(True)
 
-
     else:
         # the regular stuff
-        # periodicity
-
-
         # bytes/packets
         packets1 = str(packets_gen(False))
         packets2 = str(packets_gen(False))
@@ -190,7 +195,6 @@ for line in range(num_of_lines):
 
         # packet sources
         packet_src = initiator_gen(False)
-
 
     protocol = str(protocol_gen())
     args = [True, False]
@@ -204,14 +208,18 @@ for line in range(num_of_lines):
 
 
     time_first = current_time
+
+    # Set the time difference ... using micro_second_options
     time_last = time_first + timedelta(0, 0, choice(micro_second_options))
-    time_last = str(time_last)
+    time_first = datetime.strftime(time_first, '%Y-%m-%d-%H:%M:%S.%f')
+    # time_last = str(time_last)
+    time_last = datetime.strftime(time_last, '%Y-%m-%d-%H:%M:%S.%f')
     first_packet = str(packet_src[0])
     last_packet = str(packet_src[1])
 
     output = ' '.join([ip1, ip2, protocol, port1, port2,
           bytes1, bytes2, packets1, packets2,
-          str(time_first), time_last, first_packet, last_packet]) + '\n'
+          time_first, time_last, first_packet, last_packet]) + '\n'
     fout.write(output)
     # if target_cycle:
     #     print(ip1, ip2, protocol, port1, port2,
@@ -221,3 +229,8 @@ for line in range(num_of_lines):
     #     print(ip1, ip2, protocol, port1, port2,
     #           bytes1, bytes2, packets1, packets2,
     #           time_first, time_last, first_packet, last_packet)
+
+# QUESTIONS/TODO:
+# Redefine the target cycle to make it tighter AND to ensure
+# that it is focused on only one IP pair
+# and so that the indicators are stronger
